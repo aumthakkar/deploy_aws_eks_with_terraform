@@ -1,0 +1,56 @@
+image: 
+    name: "hashicorp/terraform:latest"
+    entrypoint: [""]
+
+variables:
+    AWS_ACCESS_KEY: ${MY_AWS_ACCESS_KEY}
+    AWS_SECRET_ACCESS_KEY: ${MY_SECRET_KEY}
+    AWS_DEFAULT_REGION: ${AWS_REGION}
+
+
+before_script:
+    - terraform --version
+    - terraform init
+
+stages:
+    - validate
+    - plan
+    - apply 
+    - destroy
+
+validate:
+    stage: validate
+    script:
+    - terraform validate
+    
+
+plan:
+    stage: plan
+    dependencies:
+        - validate
+    script:
+        - terraform plan -out="tf-planfile" -var-file=${AUTO_TERRAFORM_VARS}
+    artifacts:
+        paths:
+            - tf-planfile
+
+apply:
+    stage: apply 
+    dependencies:
+        - plan    
+    script:
+        - terraform apply -input=false "tf-planfile" 
+    when: manual
+    artifacts:
+        paths:
+            - tf-planfile
+
+    
+
+destroy:
+    stage: destroy
+    dependencies:
+        - apply 
+    script:
+        - terraform apply -destroy -auto-approve -var-file=${AUTO_TERRAFORM_VARS}
+    when: manual  
